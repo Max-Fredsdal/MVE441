@@ -1,5 +1,7 @@
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import KFold, cross_val_score
+from sklearn.model_selection import KFold, GridSearchCV, cross_val_score
+from sklearn.metrics import accuracy_score
+from sklearn.exceptions import NotFittedError
 import pandas as pd
 import numpy as np
 
@@ -23,39 +25,39 @@ class RandomForest:
         return self
 
     def predict(self, X):
+        if not hasattr(self.classifier, "estimators_"):
+            raise NotFittedError("Model must be fitted before predicting.")
         return self.classifier.predict(X)
     
     def score(self, X, y):
+        if not hasattr(self.classifier, "estimators_"):
+            raise NotFittedError("Model must be fitted before scoring.")
         return self.classifier.score(X, y)
     
-    def Error(self, foldDataTraining, foldDataTest):
-        training_errors = []
-        test_errors = []
-        for k in range(len(foldDataTraining[0, 0, :])):
-            xTrain = foldDataTraining[:, 1:, k]
-            yTrain = foldDataTraining[:, 0, k]
-
-            self.classifier.fit(xTrain, yTrain)
-            yPred = self.classifier.predict(xTrain)
-
-            training_errors.append(np.mean(np.where(yPred != yTrain, 1, 0)))
-
-        for k in range(len(foldDataTest[0, 0, :])):
-            xTest = foldDataTest[:, 1:, k]
-            yTest = foldDataTest[:, 0, k]
-
-            yPred = self.classifier.predict(xTest)
-
-            test_errors.append(np.mean(np.where(yPred != yTest, 1, 0)))
-
-        return np.mean(training_errors), np.mean(test_errors)
-    
     def cross_val_score(self, X, y, cv=5):
-        kf = KFold(n_splits=cv)
+        kf = KFold(n_splits=cv, shuffle=True, random_state=42)
         scores = cross_val_score(self.classifier, X, y, cv=kf)
-        return scores
+        return np.mean(scores), np.std(scores)
     
-    def confusion_matrix(self, y_true, y_pred):
-        from sklearn.metrics import confusion_matrix
-        return confusion_matrix(y_true, y_pred)
+    def nested_cross_val(self, X, y, param_grid, outer_splits=5, inner_splits=3):
+        outer_cv = KFold(n_splits=outer_splits, shuffle=True, random_state=42)
+        outer_scores = []
+
+        for train_idx, test_idx in outer_cv.split(X, y):
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+
+            # Inner CV for tuning
+            inner_cv = KFold(n_splits=inner_splits, shuffle=True, random_state=42)
+            grid_search = GridSearchCV(estimator=self.classifier,
+                                       param_grid=param_grid,
+                                       cv=inner_cv,
+                                       scoring='accuracy')
+            grid_search.fit(X_train, y_train)
+
+            best_model = grid_search.best_estimator_
+            y_pred = best_model.predict(X_test)
+            outer_scores.append(accuracy_score(y_test, y_pred))
+
+        return np.mean(outer_scores), np.std(outer_scores)
         
