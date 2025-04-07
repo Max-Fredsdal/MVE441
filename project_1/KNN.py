@@ -1,5 +1,6 @@
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import KFold, cross_val_score
+#from sklearn.model_selection import KFold, cross_val_score
+from sklearn.metrics import confusion_matrix
 import pandas as pd
 import numpy as np
 
@@ -21,23 +22,49 @@ class KNN:
     def predict(self, X):
         return self.classifier.predict(X)
 
-    def score(self, X, y):
-        return self.classifier.score(X, y)
+    #def score(self, X, y):
+        #return self.classifier.score(X, y)
     
-    def Error(self,foldDataTraining,foldDataTest):
-        #k = np.shape(foldData)[2]
-        trainingerrors = []
+    def Evaluation(self,foldDataTraining,foldDataTest):
+        numberOfFolds = len(foldDataTraining)
+        trainingErrors = []
         testErrors = []
-        for k in range(len(foldDataTraining[0,0,:])):
-            xTrain = foldDataTraining[:,1:,k]
-            yTrain = foldDataTraining[:,0,k]
+        labels = [-9, -2, 0, 1, 2, 5, 6, 8, 9] #Ensure same matrix dimension for confusion matrix
+        totTrainingConfusionMatrix = np.zeros((len(labels),len(labels)))
+        totTestConfusionMatrix = np.zeros((len(labels),len(labels)))
 
-            self.model.fit(xTrain,yTrain)
-            yPred = self.model.predict(xTrain)
+        for k in range(numberOfFolds):
+            train = foldDataTraining[k]
+            test = foldDataTest[k]
 
-            Trainingerrors = np.mean(np.where(yPred != yTrain,1,0))
-        
-        #for k in range(len(foldDataTest[0,0,:])):
-        
+            xTrain = train[:, 1:]
+            yTrain = train[:, 0]
+            xTest = test[:, 1:]
+            yTest = test[:, 0]
+
+            #Fitting to training data
+            self.classifier.fit(xTrain,yTrain)
+
+            #Training error
+            yPredtraining = self.classifier.predict(xTrain)
+            trainingErrorForFold = np.mean(np.where(yPredtraining != yTrain,1,0))
+            trainingErrors.append(trainingErrorForFold)
+
+            #Cross validation error
+            yPredTest = self.classifier.predict(xTest)
+            testErrorForFold = np.mean(np.where(yPredTest != yTest,1,0))
+            testErrors.append(testErrorForFold)
+
+            #Confusion matrix
+            confusionMatrixTraining = confusion_matrix(yTrain,yPredtraining,labels=labels)
+            confusionMatrixTest = confusion_matrix(yTest,yPredTest,labels=labels)
+
+            totTrainingConfusionMatrix += confusionMatrixTraining
+            totTestConfusionMatrix += confusionMatrixTest
+
+        #Get total confusion matrix (normalize over folds?)
+        totTrainingConfusionMatrix /= numberOfFolds
+        totTestConfusionMatrix /= numberOfFolds
+
+        return trainingErrors,testErrors,totTrainingConfusionMatrix,totTestConfusionMatrix
     
-        #sklearn.metrics.confusion_matrix(y_true, y_pred, *, labels=None, sample_weight=None, normalize=None)
