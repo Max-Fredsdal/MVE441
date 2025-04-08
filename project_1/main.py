@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold, cross_val_score,GridSearchCV
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
 from KNN import KNN
@@ -19,6 +20,10 @@ def main():
     df = pd.read_csv('data/Numbers.txt', delimiter=' ')
     X = df.iloc[:, 1:]
     y = df.iloc[:, 0]
+    
+    # train test split
+    X_t, X_tst, y_t, y_tst = train_test_split(X, y, test_size=0.2, random_state=42)
+    
 
     outerCV = KFold(n_splits=10, shuffle=True, random_state=42)
     foldDataTraining = []
@@ -26,9 +31,11 @@ def main():
     #Plot data
     allTestErrors = {}
     optimism = {}
+    bestModels = {}
+    finalTestErrors = {}
 
     #Get the folded training and test data
-    for train_idx, test_idx in outerCV.split(X, y):
+    for train_idx, test_idx in outerCV.split(X_t, y_t):
         X_train = X.iloc[train_idx].to_numpy()
         y_train = y.iloc[train_idx].to_numpy().reshape(-1, 1)
 
@@ -82,8 +89,10 @@ def main():
     smallKparamGrid = {'n_neighbors': list(range(1,11))} #k = 1,2,...10 --> Flexible
     largeKparamGrid = {'n_neighbors': list(range(50, 151, 10))} #k = 50,60..150 --> Rigid
 
-    _,smallKtrainingErrors,smallKtestErrors = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), smallKparamGrid)
-    _,largeKtrainingErrors,largeKtestErrors = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), largeKparamGrid)
+    _, smallKtrainingErrors, smallKtestErrors, smallBestModel = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), smallKparamGrid)
+    _, largeKtrainingErrors, largeKtestErrors, largeBestModel = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), largeKparamGrid)
+
+    
 
     KNNOptimismSmallK_Tuned = np.array(smallKtestErrors) - np.array(smallKtrainingErrors)
     KNNOptimismLargeK_Tuned = np.array(largeKtestErrors) - np.array(largeKtrainingErrors)
@@ -92,6 +101,10 @@ def main():
     allTestErrors["Large k (tuned)"] = largeKtestErrors
     optimism["Small k (tuned)"] = KNNOptimismSmallK_Tuned
     optimism["Large k (tuned)"] = KNNOptimismLargeK_Tuned
+    bestModels["small k (tuned)"] = smallBestModel
+    bestModels["large k (tuned)"] = largeBestModel
+    
+    
 
     print("KNN done tuning")
 
@@ -100,11 +113,12 @@ def main():
     {'solver': ['svd']}, 
     {'solver': ['lsqr', 'eigen'], 'shrinkage': [None, 'auto']}
     ]
-    _, ldaTrainingErrors, ldaTestErrors = doubleCV(foldDataTraining, foldDataTest, LinearDiscriminantAnalysis(), ldaParamGrid)
+    _, ldaTrainingErrors, ldaTestErrors, ldaBestModel = doubleCV(foldDataTraining, foldDataTest, LinearDiscriminantAnalysis(), ldaParamGrid)
     allTestErrors["LDA (tuned)"] = ldaTestErrors
 
     LDAOptimism_Tuned = np.array(ldaTestErrors) - np.array(ldaTrainingErrors)
     optimism["LDA (tuned)"] = LDAOptimism_Tuned
+    bestModels["LDA (tuned)"] = ldaBestModel
 
     print("LDA Done tuning")
 
@@ -115,11 +129,12 @@ def main():
     'max_features': ['sqrt'],  # feature selection per split
     'min_samples_split': [2, 5,10]          # min samples for splitting
     }
-    _, rfTrainingErrors, rfTestErrors = doubleCV(foldDataTraining, foldDataTest, RandomForestClassifier(), rfParamGrid)
+    _, rfTrainingErrors, rfTestErrors, rfBestModel = doubleCV(foldDataTraining, foldDataTest, RandomForestClassifier(), rfParamGrid)
     allTestErrors["Random Forest (tuned)"] = rfTestErrors
 
     rfOptimism_Tuned = np.array(rfTestErrors) - np.array(rfTrainingErrors)
     optimism["Random Forest (tuned)"] = rfOptimism_Tuned
+    bestModels["Random Forest (tuned)"] = rfBestModel
 
     print("randomForest Done tuning")
 
@@ -138,5 +153,14 @@ def main():
     "Get plots"
     BoxPlot(allTestErrors)
     OptimismPlot(optimism)
+    
+    # calculate the final test error for each model
+    for name, model in bestModels.items():
+        y_pred = model.predict(X_tst)
+        finalTestError = np.mean(np.where(y_pred != y_tst, 1, 0))
+        finalTestErrors[name] = finalTestError
+    
+    
+
 
 main()

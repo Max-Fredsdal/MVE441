@@ -3,23 +3,18 @@ import numpy as np
 
 def BoxPlot(testErrors):
     labels = []
-    means = []
-    stds = []
-    colors = []
+    t_errors = []
     for name,errors in testErrors.items():
         string = f"{name}"
-        mean = np.mean(errors)
-        std = np.std(errors)
 
-        means.append(mean)
-        stds.append(std)
+        t_errors.append(errors)
         labels.append(string)
 
 
     x = np.arange(len(labels))
 
     plt.figure()
-    plt.boxplot(x, notch=True, patch_artist=True, boxprops=dict(facecolor='lightblue', color='blue'))
+    plt.boxplot(t_errors, notch=True, boxprops=dict(facecolor='lightblue', color='blue'))
     plt.xticks(x, labels)
     plt.ylabel("Mean Test Error", fontsize=14)
     plt.title("Test Error per Model (with/without tuning)", fontsize=16)

@@ -98,7 +98,7 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
         testErrorForFold = np.mean(np.where(yPred != yTest,1,0))
         testErrors.append(testErrorForFold)
 
-    return outerScores,trainingErrors,testErrors
+    return outerScores, trainingErrors, testErrors, bestModel
 
 
 """Trying different hyperparameters -> CV error vs hyperparam plot"""
