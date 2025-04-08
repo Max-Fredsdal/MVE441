@@ -30,15 +30,15 @@
 28,LDA,0.0875,0.04652777777777777,No
 29,LDA,0.1125,0.07361111111111111,No
 30,Random Forest,0.06875,0.06875,No
-31,Random Forest,0.09375,0.09375,No
-32,Random Forest,0.075,0.075,No
-33,Random Forest,0.125,0.125,No
-34,Random Forest,0.08125,0.08125,No
-35,Random Forest,0.075,0.075,No
-36,Random Forest,0.0625,0.0625,No
-37,Random Forest,0.05,0.05,No
-38,Random Forest,0.05625,0.05625,No
-39,Random Forest,0.05625,0.05625,No
+31,Random Forest,0.1,0.1,No
+32,Random Forest,0.0875,0.0875,No
+33,Random Forest,0.1,0.1,No
+34,Random Forest,0.06875,0.06875,No
+35,Random Forest,0.06875,0.06875,No
+36,Random Forest,0.05,0.05,No
+37,Random Forest,0.04375,0.04375,No
+38,Random Forest,0.05,0.05,No
+39,Random Forest,0.08125,0.08125,No
 40,KNN small,0.0875,0.0875,Yes
 41,KNN small,0.09375,0.09375,Yes
 42,KNN small,0.06875,0.029166666666666674,Yes
@@ -69,13 +69,13 @@
 67,LDA,0.06875,-0.002777777777777768,Yes
 68,LDA,0.09375,0.028472222222222218,Yes
 69,LDA,0.1,0.03402777777777778,Yes
-70,Random Forest,0.08125,0.08125,Yes
-71,Random Forest,0.10625,0.10625,Yes
-72,Random Forest,0.0875,0.0875,Yes
-73,Random Forest,0.10625,0.10625,Yes
+70,Random Forest,0.075,0.075,Yes
+71,Random Forest,0.09375,0.09375,Yes
+72,Random Forest,0.08125,0.08125,Yes
+73,Random Forest,0.0875,0.0875,Yes
 74,Random Forest,0.0625,0.0625,Yes
-75,Random Forest,0.08125,0.08125,Yes
+75,Random Forest,0.08125,0.08055555555555556,Yes
 76,Random Forest,0.05,0.05,Yes
 77,Random Forest,0.05,0.05,Yes
 78,Random Forest,0.04375,0.04375,Yes
-79,Random Forest,0.08125,0.08055555555555556,Yes
+79,Random Forest,0.08125,0.08125,Yes
