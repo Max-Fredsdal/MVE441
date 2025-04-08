@@ -1,7 +1,36 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
+
+"""
+FORMAT INPUT DATAFRAME:
+df({'X':, 'Y':, 'Z':})
+
+ex:
+labels = ['classifier','error','tuned']
+
+classifier: which type of classifier as a string ex: "Random Forest"
+tuned:      Boolean if the model is tuned or not
+error:      The classification error
+
+here the classifier will be displayed on the x axis, and the classification error
+will be displayed on the y axis. the z will be the hue wether the model is tuned or not,
+the hue is optional
+"""
+
+df = sns.load_dataset("titanic")
+
+def seaborn_boxplot(df: pd.DataFrame, xCol: str, yCol: str, hueCol = None) -> int:
+    
+    sns.boxplot(data = df, x=xCol, y=yCol, hue=hueCol)
+    plt.show()
+
+    return 0
+
 
 def BoxPlot(testErrors):
+
 
     labels = list(testErrors.keys())          
     errors = list(testErrors.values())
@@ -28,5 +57,4 @@ def OptimismPlot(optimism):
     plt.show()
 
 
-
-
+# seaborn_boxplot(df,'class','age')
