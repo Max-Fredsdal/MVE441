@@ -19,7 +19,7 @@ def BoxPlot(testErrors):
     x = np.arange(len(labels))
 
     plt.figure()
-    plt.boxplot(x, means, yerr=stds, ecolor="r",color = 'b')
+    plt.boxplot(x, notch=True, patch_artist=True, boxprops=dict(facecolor='lightblue', color='blue'))
     plt.xticks(x, labels)
     plt.ylabel("Mean Test Error", fontsize=14)
     plt.title("Test Error per Model (with/without tuning)", fontsize=16)
@@ -44,7 +44,7 @@ def OptimismPlot(optimism):
     x = np.arange(len(labels))
 
     plt.figure()
-    plt.boxplot(x, means, ecolor="r",color = 'b')
+    plt.boxplot(x, notch=True, patch_artist=True, boxprops=dict(facecolor='lightblue', color='blue'))
     plt.xticks(x, labels)
     plt.ylabel("Mean optimism ", fontsize=14)
     plt.title("Optimism for each model", fontsize=16)
