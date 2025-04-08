@@ -19,11 +19,24 @@ will be displayed on the y axis. the z will be the hue wether the model is tuned
 the hue is optional
 """
 
-df = sns.load_dataset("titanic")
+# df = sns.load_dataset("titanic")
 
-def seaborn_boxplot(df: pd.DataFrame, xCol: str, yCol: str, hueCol = None) -> int:
+# df_task1 = pd.read_csv("data/task1_data.csv")
+# df_task2 = pd.read_csv("data/task2_data.csv")
+
+# len1 = df_task1.shape[0]
+# len2 = df_task2.shape[0]
+
+# df_task1["Misslabelled"] = [False for x in range(len1)]
+# df_task2["Misslabelled"] = [True for x in range(len2)]
+
+# df_conc = pd.concat([df_task1, df_task2], ignore_index=True)
+
+
+def seaborn_boxplot(df: pd.DataFrame, xCol: str, yCol: str, hueCol = None, ylim=None) -> int:
     
     sns.boxplot(data = df, x=xCol, y=yCol, hue=hueCol)
+    plt.ylim(ylim)
     plt.show()
 
     return 0
@@ -56,5 +69,4 @@ def OptimismPlot(optimism):
     plt.tight_layout()
     plt.show()
 
-
-# seaborn_boxplot(df,'class','age')
+# seaborn_boxplot(df_conc[df_conc['Tuned'] == 'No'],'Classifier','Test error','Misslabelled')
