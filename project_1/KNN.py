@@ -1,4 +1,6 @@
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 #from sklearn.model_selection import KFold, cross_val_score
 from sklearn.metrics import confusion_matrix
 import pandas as pd
@@ -22,49 +24,45 @@ class KNN:
     def predict(self, X):
         return self.classifier.predict(X)
 
-    #def score(self, X, y):
-        #return self.classifier.score(X, y)
+
+class RandomForest:
+    def __init__(self, n_estimators=100, criterion='gini', max_depth=None, min_samples_split=2,
+                 min_samples_leaf=1, max_features='sqrt', bootstrap=True, random_state=None):
+        self.classifier = RandomForestClassifier(
+            n_estimators=n_estimators,
+            criterion=criterion,
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            max_features=max_features,
+            bootstrap=bootstrap,
+            random_state=random_state
+        )
+
+    def fit(self, X, y):
+        self.classifier.fit(X, y)
+        return self
+
+    def predict(self, X):
+        return self.classifier.predict(X)
     
-    def Evaluation(self,foldDataTraining,foldDataTest):
-        numberOfFolds = len(foldDataTraining)
-        trainingErrors = []
-        testErrors = []
-        labels = [-9, -2, 0, 1, 2, 5, 6, 8, 9] #Ensure same matrix dimension for confusion matrix
-        totTrainingConfusionMatrix = np.zeros((len(labels),len(labels)))
-        totTestConfusionMatrix = np.zeros((len(labels),len(labels)))
 
-        for k in range(numberOfFolds):
-            train = foldDataTraining[k]
-            test = foldDataTest[k]
+class LDA:
+    def __init__(self, solver='svd', shrinkage=None, priors=None, n_components=None, store_covariance=False, tol=1e-4):
+        """
+        Wrapper for sklearn's LinearDiscriminantAnalysis.
+        """
+        self.classifier = LinearDiscriminantAnalysis(
+            solver=solver,
+            shrinkage=shrinkage,
+            priors=priors,
+            n_components=n_components,
+            store_covariance=store_covariance,
+            tol=tol
+        )
 
-            xTrain = train[:, 1:]
-            yTrain = train[:, 0]
-            xTest = test[:, 1:]
-            yTest = test[:, 0]
+    def fit(self, X, y):
+        self.classifier.fit(X, y)
 
-            #Fitting to training data
-            self.classifier.fit(xTrain,yTrain)
-
-            #Training error
-            yPredtraining = self.classifier.predict(xTrain)
-            trainingErrorForFold = np.mean(np.where(yPredtraining != yTrain,1,0))
-            trainingErrors.append(trainingErrorForFold)
-
-            #Cross validation error
-            yPredTest = self.classifier.predict(xTest)
-            testErrorForFold = np.mean(np.where(yPredTest != yTest,1,0))
-            testErrors.append(testErrorForFold)
-
-            #Confusion matrix
-            confusionMatrixTraining = confusion_matrix(yTrain,yPredtraining,labels=labels)
-            confusionMatrixTest = confusion_matrix(yTest,yPredTest,labels=labels)
-
-            totTrainingConfusionMatrix += confusionMatrixTraining
-            totTestConfusionMatrix += confusionMatrixTest
-
-        #Get total confusion matrix (normalize over folds?)
-        totTrainingConfusionMatrix /= numberOfFolds
-        totTestConfusionMatrix /= numberOfFolds
-
-        return trainingErrors,testErrors,totTrainingConfusionMatrix,totTestConfusionMatrix
-    
+    def predict(self, X):
+        return self.classifier.predict(X)

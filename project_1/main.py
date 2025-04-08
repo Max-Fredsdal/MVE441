@@ -1,69 +1,31 @@
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold, cross_val_score,GridSearchCV
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 import pandas as pd
 import numpy as np
 from KNN import KNN
+from KNN import LDA
+from KNN import RandomForest
 import matplotlib.pyplot as plt
+from plotter import BoxPlot, OptimismPlot
 
-def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
-    numberOfFolds = len(foldDataTraining)
-    #For each fold, perform inner CV
-    outerScores = [] #Accuracy, essentially same as 1-testerror... (can remove)
-    trainingErrors = []
-    testErrors = []
-
-    for k in range(numberOfFolds):
-
-        train = foldDataTraining[k]
-        test = foldDataTest[k]
-
-        xTrain = train[:, 1:]
-        yTrain = train[:, 0]
-        xTest = test[:, 1:]
-        yTest = test[:, 0]
-
-        innerCV = KFold(n_splits=3, shuffle = True, random_state=42)
-
-        gridSearch = GridSearchCV(
-            estimator= model,
-            param_grid=paramGrid,
-            cv = innerCV,
-            scoring='accuracy'
-        )
-
-        gridSearch.fit(xTrain,yTrain)
-
-        bestModel = gridSearch.best_estimator_
-        yPred = bestModel.predict(xTest)
-
-        outerScores.append(accuracy_score(yTest, yPred))
-    
-        #Training Error
-        yPredTraining = bestModel.predict(xTrain)
-        trainingErrorForFold = np.mean(np.where(yPredTraining != yTrain,1,0))
-        trainingErrors.append(trainingErrorForFold)
-
-        #Test Error i.e cross validation error after tuning
-        testErrorForFold = np.mean(np.where(yPred != yTest,1,0))
-        testErrors.append(testErrorForFold)
-    
-    
-    return outerScores,trainingErrors,testErrors
-
-
+from helper import Evaluation, doubleCV, CVErrorVSHyperparam
 
 def main():
     # Load the data
     df = pd.read_csv('data/Numbers.txt', delimiter=' ')
-
     X = df.iloc[:, 1:]
     y = df.iloc[:, 0]
 
-    outerCV = KFold(n_splits=5, shuffle=True, random_state=42)
+    outerCV = KFold(n_splits=10, shuffle=True, random_state=42)
     foldDataTraining = []
     foldDataTest = []
+    #Plot data
+    allTestErrors = {}
+    optimism = {}
 
     #Get the folded training and test data
     for train_idx, test_idx in outerCV.split(X, y):
@@ -81,55 +43,100 @@ def main():
     
     """Evaluation without tuning"""
 
-    #KNN
+    #KNN 
     smallKClassifier = KNN(n_neighbors=5)
-    largeKClassifier = KNN(n_neighbors=100)
+    largeKClassifier = KNN(n_neighbors=20)
+    smallKtrainingErrorsNoTuning,smallKtestErrorsNoTuning,_,_ = Evaluation(smallKClassifier,foldDataTraining,foldDataTest)
+    largeKtrainingErrorsNoTuning,largeKtestErrorsNoTuning,_,_ = Evaluation(largeKClassifier,foldDataTraining,foldDataTest)
+    allTestErrors["Small k (no tuning)"] = smallKtestErrorsNoTuning
+    allTestErrors["Large k (no tuning)"] = largeKtestErrorsNoTuning
 
-    smallKtrainingErrorsNoTuning,smallKtestErrorsNoTuning,_,_ = smallKClassifier.Evaluation(foldDataTraining,foldDataTest)
-    largeKtrainingErrorsNoTuning,largeKtestErrorsNoTuning,_,_ = largeKClassifier.Evaluation(foldDataTraining,foldDataTest)
+    KNNOptimismSmallK = np.array(smallKtestErrorsNoTuning) - np.array(smallKtrainingErrorsNoTuning)
+    KNNOptimismLargeK = np.array(largeKtestErrorsNoTuning) - np.array(largeKtrainingErrorsNoTuning)
 
-    #Optimism (note: per fold)
-    KNNOptimismSmallK = np.array(smallKtrainingErrorsNoTuning) - np.array(smallKtestErrorsNoTuning)
-    KNNOptimismLargeK = np.array(largeKtrainingErrorsNoTuning) - np.array(largeKtestErrorsNoTuning)
+    optimism["Small k (no tuning)"] = KNNOptimismSmallK
+    optimism["Large k (no tuning)"] = KNNOptimismLargeK
 
+    #LDA 
+    ldaClassifier = LDA() 
+    ldaTrainingErrors, ldaTestErrors, _, _ = Evaluation(ldaClassifier, foldDataTraining, foldDataTest)
+    allTestErrors["LDA (no tuning)"] = ldaTestErrors
+
+    LDAOptimism = np.array(ldaTestErrors) - np.array(ldaTrainingErrors)
+
+    optimism["LDA (no tuning)"] = LDAOptimism
+
+    #RandomForest
+    rfClassifier = RandomForest()
+    rfTrainingErrors, rfTestErrors, _, _ = Evaluation(rfClassifier, foldDataTraining, foldDataTest)
+    allTestErrors["Random Forest (no tuning)"] = rfTestErrors
+
+    rfOptimism = np.array(rfTestErrors) - np.array(rfTrainingErrors)
+
+    optimism["Random Forest (no tuning)"] = rfOptimism
 
     """Evaluation with tuning"""
 
     #KNN
-    smallKparamGrid = {'n_neighbors': list(range(1,11))} #k = 1,2,...10
-    largeKparamGrid = {'n_neighbors': list(range(50, 151, 10))} #k = 50,60..150 
-    smallKouterScores,smallKtrainingErrors,smallKtestErrors = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), smallKparamGrid)
-    largeKouterScores,largeKtrainingErrors,largeKtestErrors = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), largeKparamGrid)
+    
+    smallKparamGrid = {'n_neighbors': list(range(1,11))} #k = 1,2,...10 --> Flexible
+    largeKparamGrid = {'n_neighbors': list(range(50, 151, 10))} #k = 50,60..150 --> Rigid
 
-    """Box plot comparison"""
-    means = [
-    np.mean(smallKtestErrorsNoTuning),
-    np.mean(smallKtestErrors),
-    np.mean(largeKtestErrorsNoTuning),
-    np.mean(largeKtestErrors)
-    ]
-    stds = [
-    np.std(smallKtestErrorsNoTuning),
-    np.std(smallKtestErrors),
-    np.std(largeKtestErrorsNoTuning),
-    np.std(largeKtestErrors)
-    ]
+    _,smallKtrainingErrors,smallKtestErrors = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), smallKparamGrid)
+    _,largeKtrainingErrors,largeKtestErrors = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), largeKparamGrid)
 
-    labels = [
-    "Small k (KNN) (no tuning)",
-    "Small k (KNN) (tuned)",
-    "Large k (KNN) (no tuning)",
-    "Large k (KNN) (tuned)"
-    ]
-    x = np.arange(len(labels))
+    KNNOptimismSmallK_Tuned = np.array(smallKtestErrors) - np.array(smallKtrainingErrors)
+    KNNOptimismLargeK_Tuned = np.array(largeKtestErrors) - np.array(largeKtrainingErrors)
 
-    plt.figure()
-    plt.errorbar(x, means, yerr=stds,fmt='o', elinewidth=1)
-    plt.xticks(x, labels)
-    plt.ylabel("Mean Test Error")
-    plt.title("Test Error")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+    allTestErrors["Small k (tuned)"] = smallKtestErrors
+    allTestErrors["Large k (tuned)"] = largeKtestErrors
+    optimism["Small k (tuned)"] = KNNOptimismSmallK_Tuned
+    optimism["Large k (tuned)"] = KNNOptimismLargeK_Tuned
+
+    print("KNN done tuning")
+
+    #LDA
+    ldaParamGrid = [
+    {'solver': ['svd']}, 
+    {'solver': ['lsqr', 'eigen'], 'shrinkage': [None, 'auto']}
+    ]
+    _, ldaTrainingErrors, ldaTestErrors = doubleCV(foldDataTraining, foldDataTest, LinearDiscriminantAnalysis(), ldaParamGrid)
+    allTestErrors["LDA (tuned)"] = ldaTestErrors
+
+    LDAOptimism_Tuned = np.array(ldaTestErrors) - np.array(ldaTrainingErrors)
+    optimism["LDA (tuned)"] = LDAOptimism_Tuned
+
+    print("LDA Done tuning")
+
+    #Random Forest
+    rfParamGrid = {
+    'n_estimators': [20,50, 100],          # number of trees
+    'max_depth': [None, 20,50],         # control overfitting
+    'max_features': ['sqrt'],  # feature selection per split
+    'min_samples_split': [2, 5,10]          # min samples for splitting
+    }
+    _, rfTrainingErrors, rfTestErrors = doubleCV(foldDataTraining, foldDataTest, RandomForestClassifier(), rfParamGrid)
+    allTestErrors["Random Forest (tuned)"] = rfTestErrors
+
+    rfOptimism_Tuned = np.array(rfTestErrors) - np.array(rfTrainingErrors)
+    optimism["Random Forest (tuned)"] = rfOptimism_Tuned
+
+    print("randomForest Done tuning")
+
+    
+    """Evaluate range of hyperparameter values to get plot"""
+    #rangeOfk = np.arange(1,10)
+    #testErrorsForDifferentK = CVErrorVSHyperparam(KNN, 'n_neighbors', rangeOfk, foldDataTraining, foldDataTest)
+
+    #plt.plot(rangeOfk, testErrorsForDifferentK, marker='o')
+    #plt.xlabel("k")
+    #plt.ylabel("CV Error")
+    #plt.title("Unbiased CV Error vs k")
+    #plt.grid(True)
+    #plt.show()
+
+    "Get plots"
+    BoxPlot(allTestErrors)
+    OptimismPlot(optimism)
 
 main()
