@@ -10,7 +10,7 @@ from KNN import KNN
 from KNN import LDA
 from KNN import RandomForest
 import matplotlib.pyplot as plt
-from plotter import BoxPlot, OptimismPlot
+from plotter import BoxPlot, OptimismPlot, seaborn_boxplot
 
 from helper import Evaluation, doubleCV, CVErrorVSHyperparam
 
@@ -48,14 +48,14 @@ def main():
     largeKClassifier = KNN(n_neighbors=20)
     smallKtrainingErrorsNoTuning,smallKtestErrorsNoTuning,_,_ = Evaluation(smallKClassifier,foldDataTraining,foldDataTest)
     largeKtrainingErrorsNoTuning,largeKtestErrorsNoTuning,_,_ = Evaluation(largeKClassifier,foldDataTraining,foldDataTest)
-    allTestErrors["Small k (no tuning)"] = smallKtestErrorsNoTuning
-    allTestErrors["Large k (no tuning)"] = largeKtestErrorsNoTuning
+    allTestErrors["KNN small (no tuning)"] = smallKtestErrorsNoTuning
+    allTestErrors["KNN large (no tuning)"] = largeKtestErrorsNoTuning
 
     KNNOptimismSmallK = np.array(smallKtestErrorsNoTuning) - np.array(smallKtrainingErrorsNoTuning)
     KNNOptimismLargeK = np.array(largeKtestErrorsNoTuning) - np.array(largeKtrainingErrorsNoTuning)
 
-    optimism["Small k (no tuning)"] = KNNOptimismSmallK
-    optimism["Large k (no tuning)"] = KNNOptimismLargeK
+    optimism["KNN small (no tuning)"] = KNNOptimismSmallK
+    optimism["KNN large (no tuning)"] = KNNOptimismLargeK
 
     #LDA 
     ldaClassifier = LDA() 
@@ -88,10 +88,10 @@ def main():
     KNNOptimismSmallK_Tuned = np.array(smallKtestErrors) - np.array(smallKtrainingErrors)
     KNNOptimismLargeK_Tuned = np.array(largeKtestErrors) - np.array(largeKtrainingErrors)
 
-    allTestErrors["Small k (tuned)"] = smallKtestErrors
-    allTestErrors["Large k (tuned)"] = largeKtestErrors
-    optimism["Small k (tuned)"] = KNNOptimismSmallK_Tuned
-    optimism["Large k (tuned)"] = KNNOptimismLargeK_Tuned
+    allTestErrors["KNN small (tuned)"] = smallKtestErrors
+    allTestErrors["KNN large (tuned)"] = largeKtestErrors
+    optimism["KNN small (tuned)"] = KNNOptimismSmallK_Tuned
+    optimism["KNN large (tuned)"] = KNNOptimismLargeK_Tuned
 
     print("KNN done tuning")
 
@@ -108,7 +108,7 @@ def main():
 
     print("LDA Done tuning")
 
-    #Random Forest
+    # #Random Forest
     rfParamGrid = {
     'n_estimators': [20,50, 100],          # number of trees
     'max_depth': [None, 20,50],         # control overfitting
@@ -123,6 +123,30 @@ def main():
 
     print("randomForest Done tuning")
 
+
+
+    ### Converting from dictionaries to pandas dataframe:
+    records = []
+
+    for classifier_name in allTestErrors:
+        test_errors = allTestErrors[classifier_name]
+        optimism_values = optimism.get(classifier_name, [None] * len(test_errors))
+
+        tuned_flag = 'Yes' if "(tuned)" in classifier_name else 'No'
+
+        name = classifier_name.replace(" (no tuning)", "").replace(" (tuned)", "")
+
+        for test_err, opt in zip(test_errors, optimism_values):
+            records.append({
+                "Classifier": name,
+                "Test error": test_err,
+                "Optimism": opt,
+                "Tuned": tuned_flag
+            })
+
+    # Create final DataFrame
+    data = pd.DataFrame(records)
+    data.to_csv("data/task1_data.csv")
     
     """Evaluate range of hyperparameter values to get plot"""
     #rangeOfk = np.arange(1,10)
@@ -136,7 +160,10 @@ def main():
     #plt.show()
 
     "Get plots"
-    BoxPlot(allTestErrors)
-    OptimismPlot(optimism)
+    
+    print(data)
+    seaborn_boxplot(data,'Classifier','Test error','Tuned')
+    # BoxPlot(allTestErrors)
+    # OptimismPlot(optimism)
 
 main()
