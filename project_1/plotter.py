@@ -2,21 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def BoxPlot(testErrors):
-    labels = []
-    t_errors = []
-    for name,errors in testErrors.items():
-        string = f"{name}"
 
-        t_errors.append(errors)
-        labels.append(string)
-
-
-    x = np.arange(len(labels))
+    labels = list(testErrors.keys())          
+    errors = list(testErrors.values())
 
     plt.figure()
-    plt.boxplot(t_errors, notch=True, boxprops=dict(facecolor='lightblue', color='blue'))
-    plt.xticks(x, labels)
-    plt.ylabel("Mean Test Error", fontsize=14)
+    plt.boxplot(errors, labels=labels)
+    plt.ylabel("Test Error", fontsize=14)
     plt.title("Test Error per Model (with/without tuning)", fontsize=16)
     plt.grid(True, linestyle='--')
     plt.tight_layout()
@@ -24,23 +16,11 @@ def BoxPlot(testErrors):
 
 
 def OptimismPlot(optimism):
-    labels = []
-    means = []
-    stds = []
-    for name,optimismForClassif in optimism.items():
-        string = f"{name}"
-        mean = np.mean(optimismForClassif)
-        std = np.std(optimismForClassif)
-
-        means.append(mean)
-        stds.append(std)
-        labels.append(string)
-    
-    x = np.arange(len(labels))
+    labels = list(optimism.keys())          
+    optimismAll = list(optimism.values())
 
     plt.figure()
-    plt.boxplot(x, notch=True, patch_artist=True, boxprops=dict(facecolor='lightblue', color='blue'))
-    plt.xticks(x, labels)
+    plt.boxplot(optimismAll, labels=labels)
     plt.ylabel("Mean optimism ", fontsize=14)
     plt.title("Optimism for each model", fontsize=16)
     plt.grid(True, linestyle='--')
