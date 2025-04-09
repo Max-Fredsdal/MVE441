@@ -13,7 +13,7 @@ from KNN import RandomForest
 import matplotlib.pyplot as plt
 from plotter import BoxPlot, OptimismPlot, seaborn_boxplot
 
-from helper import Evaluation, doubleCV, CVErrorVSHyperparam
+from helper import Evaluation, doubleCV, CVErrorVSHyperparam, convertToLong
 
 def main():
     # Load the data
@@ -89,10 +89,15 @@ def main():
     smallKparamGrid = {'n_neighbors': list(range(1,11))} #k = 1,2,...10 --> Flexible
     largeKparamGrid = {'n_neighbors': list(range(50, 151, 10))} #k = 50,60..150 --> Rigid
 
-    _, smallKtrainingErrors, smallKtestErrors, smallBestModel = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), smallKparamGrid)
-    _, largeKtrainingErrors, largeKtestErrors, largeBestModel = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), largeKparamGrid)
-
+    _, smallKtrainingErrors, smallKtestErrors, smallBestModel, smallKGridSearchCVResults = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), smallKparamGrid)
+    _, largeKtrainingErrors, largeKtestErrors, largeBestModel, largeKGridSearchCVResults = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), largeKparamGrid)
     
+    # Process some tuning data for plotting later
+    df1 = pd.concat([d for d in smallKGridSearchCVResults])
+    df2 = pd.concat([d for d in largeKGridSearchCVResults])
+    df_knnTuningResults = pd.concat([df1[["param_n_neighbors","mean_test_score"]],df2[["param_n_neighbors","mean_test_score"]]])
+    df_knnTuningResults["Test accuracy"] = 1 - df_knnTuningResults["mean_test_score"]
+    df_knnTuningResults = df_knnTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
 
     KNNOptimismSmallK_Tuned = np.array(smallKtestErrors) - np.array(smallKtrainingErrors)
     KNNOptimismLargeK_Tuned = np.array(largeKtestErrors) - np.array(largeKtrainingErrors)
@@ -171,6 +176,8 @@ def main():
     #plt.show()
 
     "Get plots"
+
+    seaborn_boxplot(df_knnTuningResults,"Number of neighbors","Test accuracy") # Plot parameter performance for knn when tuning
     
     print(data)
     seaborn_boxplot(data,'Classifier','Test error','Tuned')
