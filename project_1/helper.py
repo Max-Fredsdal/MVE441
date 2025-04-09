@@ -2,6 +2,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import KFold, cross_val_score,GridSearchCV
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import zero_one_loss
 import pandas as pd
 import numpy as np
 from KNN import KNN
@@ -59,10 +60,11 @@ def Evaluation(model,foldDataTraining,foldDataTest):
 def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
     numberOfFolds = len(foldDataTraining)
     #For each fold, perform inner CV
-    outerScores = [] #Accuracy, essentially same as 1-testerror... (can remove)
+    
     trainingErrors = []
     testErrors = []
-    data_grid = []
+    df_CVresults = pd.DataFrame()
+    best_models = []
 
     for k in range(numberOfFolds):
 
@@ -80,27 +82,36 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
             estimator= model,
             param_grid=paramGrid,
             cv = innerCV,
-            scoring='accuracy'
+            scoring='accuracy',
+            return_train_score=True
         )
 
         gridSearch.fit(xTrain,yTrain)
 
         bestModel = gridSearch.best_estimator_
-        data_grid.append(gridSearch.cv_results_)
+        best_models.append(bestModel)
+        grid = pd.DataFrame(gridSearch.cv_results_)
+        grid["Outer fold iteration"] = k
+
+        # Mark the best model (row) for this fold
+        best_params = gridSearch.best_params_
+        grid["Best model"] = grid["params"].apply(lambda p: int(p == best_params))
+
+        df_CVresults = pd.concat([df_CVresults, grid])
+
         #xTest unbiased (not used for training)
         yPred = bestModel.predict(xTest)
 
         #Training Error (biased since model trained on xTrain)
         yPredTraining = bestModel.predict(xTrain)
 
-        trainingErrorForFold = np.mean(np.where(yPredTraining != yTrain,1,0))
-        trainingErrors.append(trainingErrorForFold)
+        trainingErrors.append(zero_one_loss(yTrain, yPredTraining))
 
         #Test Error i.e cross validation error after tuning
-        testErrorForFold = np.mean(np.where(yPred != yTest,1,0))
-        testErrors.append(testErrorForFold)
+        testErrors.append(zero_one_loss(yTrain, yTrain))
+        
 
-    return outerScores, trainingErrors, testErrors, bestModel, data_grid
+    return  trainingErrors, testErrors, best_models, df_CVresults
 
 
 """Trying different hyperparameters -> CV error vs hyperparam plot"""
