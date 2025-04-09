@@ -84,7 +84,7 @@ def main():
     
     kNNparamGrid = {'n_neighbors': list(range(1,15))} #k = 1,2,...10 --> Flexible
 
-    kNNtrainingErrors, kNNtestErrors, smallBestModel, df_kNNTuningResults = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), kNNparamGrid)
+    kNNtrainingErrors, kNNtestErrors, kNNBestModel, df_kNNTuningResults = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), kNNparamGrid)
 
     df_kNNTuningResults["Test error"] = 1 - df_kNNTuningResults["mean_test_score"]
     df_kNNTuningResults = df_kNNTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
@@ -101,7 +101,7 @@ def main():
     {'solver': ['svd']}, 
     {'solver': ['lsqr', 'eigen'], 'shrinkage': [None, 'auto']}
     ]
-    ldaTrainingErrors, ldaTestErrors, ldaBestModel, df_ldaTuningResults = doubleCV(foldDataTraining, foldDataTest, LinearDiscriminantAnalysis(), ldaParamGrid)
+    ldaTrainingErrors, ldaTestErrors, ldaBestModels, df_ldaTuningResults = doubleCV(foldDataTraining, foldDataTest, LinearDiscriminantAnalysis(), ldaParamGrid)
     
     df_ldaTuningResults["Test error"] = 1 - df_ldaTuningResults["mean_test_score"]
     # df_ldaTuningResults = df_ldaTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
@@ -111,7 +111,7 @@ def main():
 
     LDAOptimism_Tuned = np.array(ldaTestErrors) - np.array(ldaTrainingErrors)
     optimism["LDA (tuned)"] = LDAOptimism_Tuned
-    bestModels["LDA (tuned)"] = ldaBestModel
+    bestModels["LDA (tuned)"] = ldaBestModels
 
     print("LDA Done tuning")
 
@@ -122,17 +122,17 @@ def main():
     'max_features': ['sqrt'],  # feature selection per split
     'min_samples_split': [2, 5,10]          # min samples for splitting
     }
-    rfTrainingErrors, rfTestErrors, rfBestModel, df_randomTreeTuningResults = doubleCV(foldDataTraining, foldDataTest, RandomForestClassifier(), rfParamGrid)
+    rfTrainingErrors, rfTestErrors, rfBestModels, df_rfTuningResults = doubleCV(foldDataTraining, foldDataTest, RandomForestClassifier(), rfParamGrid)
     
-    df_randomTreeTuningResults["Test error"] = 1 - df_randomTreeTuningResults["mean_test_score"]
-    # df_randomTreeTuningResults = df_randomTreeTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
-    df_randomTreeTuningResults.to_csv("data/randomTreeTuningResults_task1.csv")
+    df_rfTuningResults["Test error"] = 1 - df_rfTuningResults["mean_test_score"]
+    # df_rfTuningResults = df_rfTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
+    df_rfTuningResults.to_csv("data/rfTuningResults_task1.csv")
     
     allTestErrors["Random Forest (tuned)"] = rfTestErrors
 
     rfOptimism_Tuned = np.array(rfTestErrors) - np.array(rfTrainingErrors)
     optimism["Random Forest (tuned)"] = rfOptimism_Tuned
-    bestModels["Random Forest (tuned)"] = rfBestModel
+    bestModels["Random Forest (tuned)"] = rfBestModels
 
     print("randomForest Done tuning")
 
