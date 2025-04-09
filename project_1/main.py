@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold, cross_val_score,GridSearchCV
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import zero_one_loss
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
@@ -25,7 +26,6 @@ def main():
     X_t, X_tst, y_t, y_tst = train_test_split(X, y, test_size=0.2, shuffle=True)
 
     # y_t = misslabel_data_simple(y_t,0.4)
-    
 
     outerCV = KFold(n_splits=10, shuffle=True)
     foldDataTraining = []
@@ -84,13 +84,13 @@ def main():
     
     kNNparamGrid = {'n_neighbors': list(range(1,15))} #k = 1,2,...10 --> Flexible
 
-    kNNtrainingErrors, kNNtestErrors, kNNBestModel, df_kNNTuningResults = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), kNNparamGrid)
+    kNNtrainingErrors, kNNtestErrors, kNNBestModels, df_kNNTuningResults = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), kNNparamGrid)
 
     df_kNNTuningResults["Test error"] = 1 - df_kNNTuningResults["mean_test_score"]
     df_kNNTuningResults = df_kNNTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
     df_kNNTuningResults.to_csv("data/kNNTuningResults_task1.csv")
     kNNOptimism_Tuned = np.array(kNNtestErrors) - np.array(kNNtrainingErrors)
-    
+
     allTestErrors["KNN (tuned)"] = kNNtestErrors
     optimism["KNN (tuned)"] = kNNOptimism_Tuned
 
@@ -180,14 +180,27 @@ def main():
     seaborn_boxplot(data,'Classifier','Test error','Tuned')
     # BoxPlot(allTestErrors)
     # OptimismPlot(optimism)
+
+    # Finds the parameter constilation that is most common among the best models from the tuning
+    best_kNN_params = pd.Series([model.get_params() for model in kNNBestModels]).mode()[0]
+    best_lda_params = pd.Series([model.get_params() for model in ldaBestModels]).mode()[0]
+    best_rf_params = pd.Series([model.get_params() for model in rfBestModels]).mode()[0]
+
+    optimalKNN = KNN(**{k: v for k, v in best_kNN_params.items() if k in ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']})
+    optimalLDA = LDA(**{k: v for k, v in best_lda_params.items() if k in ['solver', 'shrinkage', 'priors', 'n_components', 'store_covariance', 'tol']})
+    optimalRF  = RandomForest(**{k: v for k, v in best_rf_params.items() if k in ['n_estimators', 'criterion', 'max_depth', 'min_samples_split', 'min_samples_leaf', 'max_features','bootstrap','random_state']})
+
+    optimal_models = {"KNN":optimalKNN, "LDA":optimalLDA, "Random forest":optimalRF}
+
     
     # calculate the final test error for each model
-    for name, model in bestModels.items():
-        y_pred = model.predict(X_tst)
-        finalTestError = np.mean(np.where(y_pred != y_tst, 1, 0))
-        finalTestErrors[name] = finalTestError
+    for name, model in optimal_models.items():
+        model.fit(X_t,y_t)
+        yPred = model.predict(X_tst)
+        error = zero_one_loss(y_tst,yPred)
+        finalTestErrors[name] = error
     
-    
+    print(finalTestErrors)    
 
 
 main()
