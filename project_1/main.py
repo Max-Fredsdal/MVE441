@@ -22,12 +22,12 @@ def main():
     y = df.iloc[:, 0]
     
     # train test split
-    X_t, X_tst, y_t, y_tst = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_t, X_tst, y_t, y_tst = train_test_split(X, y, test_size=0.2, shuffle=True)
 
     # y_t = misslabel_data_simple(y_t,0.4)
     
 
-    outerCV = KFold(n_splits=10, shuffle=True, random_state=42)
+    outerCV = KFold(n_splits=10, shuffle=True)
     foldDataTraining = []
     foldDataTest = []
     #Plot data
@@ -54,7 +54,7 @@ def main():
 
     #KNN 
     kNNClassifier = KNN(n_neighbors=5)
-    kNNtrainingErrorsNoTuning,kNNtestErrorsNoTuning,_,_ = Evaluation(kNNClassifier,foldDataTraining,foldDataTest)
+    kNNtrainingErrorsNoTuning, kNNtestErrorsNoTuning ,_,_ = Evaluation(kNNClassifier,foldDataTraining,foldDataTest)
     allTestErrors["KNN (no tuning)"] = kNNtestErrorsNoTuning
 
     kNNOptimism = np.array(kNNtestErrorsNoTuning) - np.array(kNNtrainingErrorsNoTuning)
@@ -89,8 +89,8 @@ def main():
     df_kNNTuningResults["Test error"] = 1 - df_kNNTuningResults["mean_test_score"]
     df_kNNTuningResults = df_kNNTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
     df_kNNTuningResults.to_csv("data/kNNTuningResults_task1.csv")
-    print(kNNtrainingErrors)
     kNNOptimism_Tuned = np.array(kNNtestErrors) - np.array(kNNtrainingErrors)
+    
     allTestErrors["KNN (tuned)"] = kNNtestErrors
     optimism["KNN (tuned)"] = kNNOptimism_Tuned
 

@@ -14,13 +14,16 @@ def misslabel_data_simple(data, p):
     lenData = np.shape(data)[0]
     nChanges = int(lenData*p)
     labels = np.unique(data)
-    newData = data
+    newData = data.copy()
 
     idx = np.random.choice([i for i in range(lenData)], size=nChanges, replace=False)
     for i in idx:
         newData[i] = np.random.choice(labels[labels != data[i]])
 
-    return newData
+    if np.shape(newData) == np.shape(data):
+        return newData
+    else:
+        raise Exception("Modified data shape is inconsistent with original shape!")
 
 
 def misslabel_data_specified(data, labels, p=0.1, pOut = []):

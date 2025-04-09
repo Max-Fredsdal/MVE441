@@ -76,7 +76,7 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
         xTest = test[:, 1:]
         yTest = test[:, 0]
 
-        innerCV = KFold(n_splits=3, shuffle = True, random_state=42)
+        innerCV = KFold(n_splits=3, shuffle = True)
 
         gridSearch = GridSearchCV(
             estimator= model,
@@ -104,11 +104,10 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
 
         #Training Error (biased since model trained on xTrain)
         yPredTraining = bestModel.predict(xTrain)
-
         trainingErrors.append(zero_one_loss(yTrain, yPredTraining))
-
+        
         #Test Error i.e cross validation error after tuning
-        testErrors.append(zero_one_loss(yTrain, yTrain))
+        testErrors.append(zero_one_loss(yTest, yPred))
         
 
     return  trainingErrors, testErrors, best_models, df_CVresults
