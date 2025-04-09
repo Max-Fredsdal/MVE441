@@ -62,6 +62,7 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
     outerScores = [] #Accuracy, essentially same as 1-testerror... (can remove)
     trainingErrors = []
     testErrors = []
+    data_grid = []
 
     for k in range(numberOfFolds):
 
@@ -85,6 +86,7 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
         gridSearch.fit(xTrain,yTrain)
 
         bestModel = gridSearch.best_estimator_
+        data_grid.append(gridSearch.cv_results_)
         #xTest unbiased (not used for training)
         yPred = bestModel.predict(xTest)
 
@@ -98,7 +100,7 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
         testErrorForFold = np.mean(np.where(yPred != yTest,1,0))
         testErrors.append(testErrorForFold)
 
-    return outerScores, trainingErrors, testErrors, bestModel
+    return outerScores, trainingErrors, testErrors, bestModel, data_grid
 
 
 """Trying different hyperparameters -> CV error vs hyperparam plot"""
