@@ -21,23 +21,22 @@ the hue is optional
 
 # df = sns.load_dataset("titanic")
 
-# df_task1 = pd.read_csv("data/task1_data.csv")
-# df_task2 = pd.read_csv("data/task2_data.csv")
-
-# len1 = df_task1.shape[0]
-# len2 = df_task2.shape[0]
-
-# df_task1["Misslabelled"] = [False for x in range(len1)]
-# df_task2["Misslabelled"] = [True for x in range(len2)]
-
-# df_conc = pd.concat([df_task1, df_task2], ignore_index=True)
-
-
-def seaborn_boxplot(df: pd.DataFrame, xCol: str, yCol: str, hueCol = None, ylim=None) -> int:
+def seaborn_boxplot(df: pd.DataFrame, xCol: str, yCol: str, hueCol = None, hueLabelMap = None, ylim=None) -> int:
     
-    sns.boxplot(data = df, x=xCol, y=yCol, hue=hueCol)
-    plt.ylim(ylim)
+    ax = sns.boxplot(data = df, x=xCol, y=yCol, hue=hueCol)
+    
+    if ylim:
+        plt.ylim(ylim)
+    plt.gca().set_axisbelow(True)
+    plt.grid(axis='y', alpha=0.3 , linestyle="--")
+
+    if hueCol and hueLabelMap:
+        handles, labels = ax.get_legend_handles_labels()
+        custom_labels = [hueLabelMap.get(label, label) for label in labels]
+        ax.legend(handles=handles, labels=custom_labels, title=hueCol)
+
     plt.show()
+    
 
     return 0
 
@@ -68,5 +67,6 @@ def OptimismPlot(optimism):
     plt.grid(True, linestyle='--')
     plt.tight_layout()
     plt.show()
+# print(np.unique(df['sex'].values))
+# seaborn_boxplot(df,'class','age','sex',{"male":"man","female":"kvinna"})
 
-# seaborn_boxplot(df_conc[df_conc['Tuned'] == 'No'],'Classifier','Test error','Misslabelled')
