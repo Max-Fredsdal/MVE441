@@ -23,11 +23,11 @@ def main():
     y = df.iloc[:, 0]
     
     # train test split
-    X_t, X_tst, y_t, y_tst = train_test_split(X, y, test_size=0.2, shuffle=True)
+    X_t, X_tst, y_t, y_tst = train_test_split(X, y, test_size=0.2, shuffle=True, random_state=42)
 
-    # y_t = misslabel_data_simple(y_t,0.4)
+    y_t = misslabel_data_simple(y_t, 0.1)
 
-    outerCV = KFold(n_splits=10, shuffle=True)
+    outerCV = KFold(n_splits=10, shuffle=True, random_state=42)
     foldDataTraining = []
     foldDataTest = []
     #Plot data
@@ -52,7 +52,7 @@ def main():
     
     """Evaluation without tuning"""
 
-    #KNN 
+    #KNN small k (flexible)
     kNNClassifier = KNN(n_neighbors=5)
     kNNtrainingErrorsNoTuning, kNNTuningTestErrorsNoTuning = Evaluation(kNNClassifier,foldDataTraining,foldDataTest)
     allTuningTestErrors["KNN (no tuning)"] = kNNTuningTestErrorsNoTuning
@@ -60,7 +60,16 @@ def main():
     kNNOptimism = np.array(kNNTuningTestErrorsNoTuning) - np.array(kNNtrainingErrorsNoTuning)
     optimism["KNN (no tuning)"] = kNNOptimism
 
+    #KNN large k (rigid)
+    kNNClassifierLarge = KNN(n_neighbors=20)
+    kNNtrainingErrorsNoTuningLarge, kNNtestErrorsNoTuningLarge ,_,_ = Evaluation(kNNClassifierLarge,foldDataTraining,foldDataTest)
+    allTestErrors["KNN LargeK (no tuning)"] = kNNtestErrorsNoTuningLarge
+    
+    kNNOptimismLarge = np.array(kNNtestErrorsNoTuningLarge) - np.array(kNNtrainingErrorsNoTuningLarge)
+    optimism["KNN LargeK (no tuning)"] = kNNOptimismLarge
+    
     #LDA 
+    
     ldaClassifier = LDA() 
     ldaTrainingErrors, ldaTuningTestErrors = Evaluation(ldaClassifier, foldDataTraining, foldDataTest)
     allTuningTestErrors["LDA (no tuning)"] = ldaTuningTestErrors
@@ -80,9 +89,11 @@ def main():
 
     #KNN
     
-    kNNparamGrid = {'n_neighbors': list(range(1,15))} #k = 1,2,...10 --> Flexible
+    kNNparamGrid = {'n_neighbors': list(range(1,10))} #k = 1,2,...10 --> Flexible
+    kNNparamGridLarge = {'n_neighbors': list(range(15,25))} #k = 15,16,...25 --> Rigid
 
     kNNtrainingErrors, kNNTuningTestErrors, kNNBestModels, df_kNNTuningResults = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), kNNparamGrid)
+    kNNtrainingErrorsLarge, kNNtestErrorsLarge, kNNBestModelsLarge, df_kNNTuningResultsLarge = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), kNNparamGridLarge)
 
     df_kNNTuningResults["Tuning test error"] = 1 - df_kNNTuningResults["mean_test_score"]
     df_kNNTuningResults = df_kNNTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
@@ -91,6 +102,14 @@ def main():
 
     allTuningTestErrors["KNN (tuned)"] = kNNTuningTestErrors
     optimism["KNN (tuned)"] = kNNOptimism_Tuned
+    
+    df_kNNTuningResultsLarge["Test error"] = 1 - df_kNNTuningResultsLarge["mean_test_score"]
+    df_kNNTuningResultsLarge = df_kNNTuningResultsLarge.rename(columns={"param_n_neighbors": "Number of neighbors"})
+    df_kNNTuningResultsLarge.to_csv("data/kNNTuningResults_task1_large.csv")
+    kNNOptimism_TunedLarge = np.array(kNNtestErrorsLarge) - np.array(kNNtrainingErrorsLarge)
+    
+    allTestErrors["KNN LargeK (tuned)"] = kNNtestErrorsLarge
+    optimism["KNN LargeK (tuned)"] = kNNOptimism_TunedLarge
 
     print("KNN done tuning")
 
@@ -135,8 +154,6 @@ def main():
 
 
     print("randomForest Done tuning")
-
-
 
     ### Converting from dictionaries to pandas dataframe:
     records = []
@@ -183,16 +200,17 @@ def main():
 
     # Finds the parameter constilation that is most common among the best models from the tuning
     best_kNN_params = pd.Series([model.get_params() for model in kNNBestModels]).mode()[0]
+    best_kNN_params_large = pd.Series([model.get_params() for model in kNNBestModelsLarge]).mode()[0]
     best_lda_params = pd.Series([model.get_params() for model in ldaBestModels]).mode()[0]
     best_rf_params = pd.Series([model.get_params() for model in rfBestModels]).mode()[0]
 
     optimalKNN = KNN(**{k: v for k, v in best_kNN_params.items() if k in ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']})
+    optimalKNNLarge = KNN(**{k: v for k, v in best_kNN_params_large.items() if k in ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']})
     optimalLDA = LDA(**{k: v for k, v in best_lda_params.items() if k in ['solver', 'shrinkage', 'priors', 'n_components', 'store_covariance', 'tol']})
     optimalRF  = RandomForest(**{k: v for k, v in best_rf_params.items() if k in ['n_estimators', 'criterion', 'max_depth', 'min_samples_split', 'min_samples_leaf', 'max_features','bootstrap','random_state']})
 
-    optimal_models = {"KNN":optimalKNN, "LDA":optimalLDA, "Random forest":optimalRF}
-
-    
+    optimal_models = {"KNN":optimalKNN, "KNN LargeK":optimalKNNLarge, "LDA":optimalLDA, "Random forest":optimalRF}
+   
     # calculate the final test error for each model
     for name, model in optimal_models.items():
         model.fit(X_t,y_t)
@@ -200,7 +218,8 @@ def main():
         error = zero_one_loss(y_tst,yPred)
         finalTuningTestErrors[name] = error
     
-    print(finalTuningTestErrors)    
+    print(finalTestErrors)    
+    
 
 
 main()

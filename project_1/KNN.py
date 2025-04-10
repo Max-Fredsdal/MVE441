@@ -26,7 +26,7 @@ class KNN:
 
 
 class RandomForest:
-    def __init__(self, n_estimators=100, criterion='gini', max_depth=None, min_samples_split=2,
+    def __init__(self, n_estimators=25, criterion='gini', max_depth=None, min_samples_split=2,
                  min_samples_leaf=1, max_features='sqrt', bootstrap=True, random_state=None):
         self.classifier = RandomForestClassifier(
             n_estimators=n_estimators,
