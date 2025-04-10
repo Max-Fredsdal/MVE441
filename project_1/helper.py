@@ -12,14 +12,10 @@ import matplotlib.pyplot as plt
 
 """Used for training/test error (no tuning)"""
 
-def Evaluation(model,foldDataTraining,foldDataTest):
+def Evaluation(model,foldDataTraining,foldDataTest, trainFlag=True):
     numberOfFolds = len(foldDataTraining)
     trainingErrors = []
     testErrors = []
-    labels = [-9, -2, 0, 1, 2, 5, 6, 8, 9] #Ensure same matrix dimension for confusion matrix
-    totTrainingConfusionMatrix = np.zeros((len(labels),len(labels)))
-    totTestConfusionMatrix = np.zeros((len(labels),len(labels)))
-
 
     for k in range(numberOfFolds):
         train = foldDataTraining[k]
@@ -31,30 +27,22 @@ def Evaluation(model,foldDataTraining,foldDataTest):
         yTest = test[:, 0]
 
         #Fitting to training data
-        model.classifier.fit(xTrain,yTrain)
+        if trainFlag:
+            model.classifier.fit(xTrain,yTrain)
 
         #Training error
-        yPredtraining = model.classifier.predict(xTrain)
-        trainingErrorForFold = np.mean(np.where(yPredtraining != yTrain,1,0))
-        trainingErrors.append(trainingErrorForFold)
+        if trainFlag:
+            yPredtraining = model.classifier.predict(xTrain)
+            trainingErrorForFold = np.mean(np.where(yPredtraining != yTrain,1,0))
+            trainingErrors.append(trainingErrorForFold)
 
         #Cross validation error
         yPredTest = model.classifier.predict(xTest)
         testErrorForFold = np.mean(np.where(yPredTest != yTest,1,0))
         testErrors.append(testErrorForFold)
 
-        #Confusion matrix
-        confusionMatrixTraining = confusion_matrix(yTrain,yPredtraining,labels=labels)
-        confusionMatrixTest = confusion_matrix(yTest,yPredTest,labels=labels)
 
-        totTrainingConfusionMatrix += confusionMatrixTraining
-        totTestConfusionMatrix += confusionMatrixTest
-
-    #Get total confusion matrix (normalize over folds?)
-    totTrainingConfusionMatrix /= numberOfFolds
-    totTestConfusionMatrix /= numberOfFolds
-
-    return trainingErrors,testErrors,totTrainingConfusionMatrix,totTestConfusionMatrix
+    return trainingErrors,testErrors
 
 """Tuning models using double cross-validation"""
 def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
@@ -62,7 +50,7 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
     #For each fold, perform inner CV
     
     trainingErrors = []
-    testErrors = []
+    TuningTestErrors = []
     df_CVresults = pd.DataFrame()
     best_models = []
 
@@ -107,10 +95,10 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
         trainingErrors.append(zero_one_loss(yTrain, yPredTraining))
         
         #Test Error i.e cross validation error after tuning
-        testErrors.append(zero_one_loss(yTest, yPred))
+        TuningTestErrors.append(zero_one_loss(yTest, yPred))
         
 
-    return  trainingErrors, testErrors, best_models, df_CVresults
+    return  trainingErrors, TuningTestErrors, best_models, df_CVresults
 
 
 """Trying different hyperparameters -> CV error vs hyperparam plot"""
@@ -120,7 +108,29 @@ def CVErrorVSHyperparam(model_class, hyperparam_name, hyperparam_values, foldDat
     for val in hyperparam_values:
         kwargs = {hyperparam_name: val}
         classInstance = model_class(**kwargs)
-        _, testErrors, _, _ = Evaluation(classInstance, foldDataTraining, foldDataTest)
-        meanErrors.append(np.mean(testErrors))
+        _, TuningTestErrors, _, _ = Evaluation(classInstance, foldDataTraining, foldDataTest)
+        meanErrors.append(np.mean(TuningTestErrors))
 
     return meanErrors
+
+def evaluate_best_models(models, testFold):
+    performance = {}
+    
+    
+    for i, model in enumerate(models):
+        errors = []
+        for k in range(len(testFold)):
+            test_data = testFold[k]
+            xTest = test_data[:, 1:]
+            yTest = test_data[:, 0]
+
+            yPred = model.predict(xTest)
+            error = zero_one_loss(yTest, yPred)
+            errors.append(error)
+
+        performance[f"Model {i+1}"] = errors
+        rows = [(key, val) for key, values in performance.items() for val in values]
+        df = pd.DataFrame(rows, columns=["Model name", "CV Error"])
+
+    return df
+

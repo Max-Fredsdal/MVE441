@@ -14,7 +14,7 @@ from KNN import RandomForest
 import matplotlib.pyplot as plt
 from plotter import BoxPlot, OptimismPlot, seaborn_boxplot
 from misslabel import misslabel_data_simple, misslabel_data_specified
-from helper import Evaluation, doubleCV, CVErrorVSHyperparam
+from helper import Evaluation, doubleCV, CVErrorVSHyperparam, evaluate_best_models
 
 def main():
     # Load the data
@@ -31,10 +31,10 @@ def main():
     foldDataTraining = []
     foldDataTest = []
     #Plot data
-    allTestErrors = {}
+    allTuningTestErrors = {}
     optimism = {}
     bestModels = {}
-    finalTestErrors = {}
+    finalTuningTestErrors = {}
 
     #Get the folded training and test data
     for train_idx, test_idx in outerCV.split(X_t, y_t):
@@ -54,27 +54,25 @@ def main():
 
     #KNN 
     kNNClassifier = KNN(n_neighbors=5)
-    kNNtrainingErrorsNoTuning, kNNtestErrorsNoTuning ,_,_ = Evaluation(kNNClassifier,foldDataTraining,foldDataTest)
-    allTestErrors["KNN (no tuning)"] = kNNtestErrorsNoTuning
+    kNNtrainingErrorsNoTuning, kNNTuningTestErrorsNoTuning = Evaluation(kNNClassifier,foldDataTraining,foldDataTest)
+    allTuningTestErrors["KNN (no tuning)"] = kNNTuningTestErrorsNoTuning
 
-    kNNOptimism = np.array(kNNtestErrorsNoTuning) - np.array(kNNtrainingErrorsNoTuning)
+    kNNOptimism = np.array(kNNTuningTestErrorsNoTuning) - np.array(kNNtrainingErrorsNoTuning)
     optimism["KNN (no tuning)"] = kNNOptimism
 
     #LDA 
     ldaClassifier = LDA() 
-    ldaTrainingErrors, ldaTestErrors, _, _ = Evaluation(ldaClassifier, foldDataTraining, foldDataTest)
-    allTestErrors["LDA (no tuning)"] = ldaTestErrors
-
-    LDAOptimism = np.array(ldaTestErrors) - np.array(ldaTrainingErrors)
-
+    ldaTrainingErrors, ldaTuningTestErrors = Evaluation(ldaClassifier, foldDataTraining, foldDataTest)
+    allTuningTestErrors["LDA (no tuning)"] = ldaTuningTestErrors
+    LDAOptimism = np.array(ldaTuningTestErrors) - np.array(ldaTrainingErrors)
     optimism["LDA (no tuning)"] = LDAOptimism
 
     #RandomForest
     rfClassifier = RandomForest()
-    rfTrainingErrors, rfTestErrors, _, _ = Evaluation(rfClassifier, foldDataTraining, foldDataTest)
-    allTestErrors["Random Forest (no tuning)"] = rfTestErrors
+    rfTrainingErrors, rfTuningTestErrors = Evaluation(rfClassifier, foldDataTraining, foldDataTest)
+    allTuningTestErrors["Random Forest (no tuning)"] = rfTuningTestErrors
 
-    rfOptimism = np.array(rfTestErrors) - np.array(rfTrainingErrors)
+    rfOptimism = np.array(rfTuningTestErrors) - np.array(rfTrainingErrors)
 
     optimism["Random Forest (no tuning)"] = rfOptimism
 
@@ -84,14 +82,14 @@ def main():
     
     kNNparamGrid = {'n_neighbors': list(range(1,15))} #k = 1,2,...10 --> Flexible
 
-    kNNtrainingErrors, kNNtestErrors, kNNBestModels, df_kNNTuningResults = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), kNNparamGrid)
+    kNNtrainingErrors, kNNTuningTestErrors, kNNBestModels, df_kNNTuningResults = doubleCV(foldDataTraining, foldDataTest, KNeighborsClassifier(), kNNparamGrid)
 
-    df_kNNTuningResults["Test error"] = 1 - df_kNNTuningResults["mean_test_score"]
+    df_kNNTuningResults["Tuning test error"] = 1 - df_kNNTuningResults["mean_test_score"]
     df_kNNTuningResults = df_kNNTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
     df_kNNTuningResults.to_csv("data/kNNTuningResults_task1.csv")
-    kNNOptimism_Tuned = np.array(kNNtestErrors) - np.array(kNNtrainingErrors)
+    kNNOptimism_Tuned = np.array(kNNTuningTestErrors) - np.array(kNNtrainingErrors)
 
-    allTestErrors["KNN (tuned)"] = kNNtestErrors
+    allTuningTestErrors["KNN (tuned)"] = kNNTuningTestErrors
     optimism["KNN (tuned)"] = kNNOptimism_Tuned
 
     print("KNN done tuning")
@@ -101,15 +99,15 @@ def main():
     {'solver': ['svd']}, 
     {'solver': ['lsqr', 'eigen'], 'shrinkage': [None, 'auto']}
     ]
-    ldaTrainingErrors, ldaTestErrors, ldaBestModels, df_ldaTuningResults = doubleCV(foldDataTraining, foldDataTest, LinearDiscriminantAnalysis(), ldaParamGrid)
+    ldaTrainingErrors, ldaTuningTestErrors, ldaBestModels, df_ldaTuningResults = doubleCV(foldDataTraining, foldDataTest, LinearDiscriminantAnalysis(), ldaParamGrid)
     
-    df_ldaTuningResults["Test error"] = 1 - df_ldaTuningResults["mean_test_score"]
+    df_ldaTuningResults["Tuning test error"] = 1 - df_ldaTuningResults["mean_test_score"]
     # df_ldaTuningResults = df_ldaTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
     df_ldaTuningResults.to_csv("data/ldaTuningResults_task1.csv")
 
-    allTestErrors["LDA (tuned)"] = ldaTestErrors
+    allTuningTestErrors["LDA (tuned)"] = ldaTuningTestErrors
 
-    LDAOptimism_Tuned = np.array(ldaTestErrors) - np.array(ldaTrainingErrors)
+    LDAOptimism_Tuned = np.array(ldaTuningTestErrors) - np.array(ldaTrainingErrors)
     optimism["LDA (tuned)"] = LDAOptimism_Tuned
     bestModels["LDA (tuned)"] = ldaBestModels
 
@@ -122,17 +120,19 @@ def main():
     'max_features': ['sqrt'],  # feature selection per split
     'min_samples_split': [2, 5,10]          # min samples for splitting
     }
-    rfTrainingErrors, rfTestErrors, rfBestModels, df_rfTuningResults = doubleCV(foldDataTraining, foldDataTest, RandomForestClassifier(), rfParamGrid)
+    rfTrainingErrors, rfTuningTestErrors, rfBestModels, df_rfTuningResults = doubleCV(foldDataTraining, foldDataTest, RandomForestClassifier(), rfParamGrid)
     
-    df_rfTuningResults["Test error"] = 1 - df_rfTuningResults["mean_test_score"]
+    df_rfTuningResults["Tuning test error"] = 1 - df_rfTuningResults["mean_test_score"]
     # df_rfTuningResults = df_rfTuningResults.rename(columns={"param_n_neighbors": "Number of neighbors"})
     df_rfTuningResults.to_csv("data/rfTuningResults_task1.csv")
     
-    allTestErrors["Random Forest (tuned)"] = rfTestErrors
+    allTuningTestErrors["Random Forest (tuned)"] = rfTuningTestErrors
 
-    rfOptimism_Tuned = np.array(rfTestErrors) - np.array(rfTrainingErrors)
+    rfOptimism_Tuned = np.array(rfTuningTestErrors) - np.array(rfTrainingErrors)
     optimism["Random Forest (tuned)"] = rfOptimism_Tuned
     bestModels["Random Forest (tuned)"] = rfBestModels
+
+
 
     print("randomForest Done tuning")
 
@@ -141,8 +141,8 @@ def main():
     ### Converting from dictionaries to pandas dataframe:
     records = []
 
-    for classifier_name in allTestErrors:
-        test_errors = allTestErrors[classifier_name]
+    for classifier_name in allTuningTestErrors:
+        test_errors = allTuningTestErrors[classifier_name]
         optimism_values = optimism.get(classifier_name, [None] * len(test_errors))
 
         tuned_flag = 'Yes' if "(tuned)" in classifier_name else 'No'
@@ -152,7 +152,7 @@ def main():
         for test_err, opt in zip(test_errors, optimism_values):
             records.append({
                 "Classifier": name,
-                "Test error": test_err,
+                "Tuning test error": test_err,
                 "Optimism": opt,
                 "Tuned": tuned_flag
             })
@@ -163,9 +163,9 @@ def main():
     
     """Evaluate range of hyperparameter values to get plot"""
     #rangeOfk = np.arange(1,10)
-    #testErrorsForDifferentK = CVErrorVSHyperparam(KNN, 'n_neighbors', rangeOfk, foldDataTraining, foldDataTest)
+    #TuningTestErrorsForDifferentK = CVErrorVSHyperparam(KNN, 'n_neighbors', rangeOfk, foldDataTraining, foldDataTest)
 
-    #plt.plot(rangeOfk, testErrorsForDifferentK, marker='o')
+    #plt.plot(rangeOfk, TuningTestErrorsForDifferentK, marker='o')
     #plt.xlabel("k")
     #plt.ylabel("CV Error")
     #plt.title("Unbiased CV Error vs k")
@@ -174,11 +174,11 @@ def main():
 
     "Get plots"
 
-    seaborn_boxplot(df_kNNTuningResults,"Number of neighbors","Test error") # Plot parameter performance for knn when tuning
+    seaborn_boxplot(df_kNNTuningResults,"Number of neighbors","Tuning test error") # Plot parameter performance for knn when tuning
    
     # print(data)
-    seaborn_boxplot(data,'Classifier','Test error','Tuned')
-    # BoxPlot(allTestErrors)
+    seaborn_boxplot(data,'Classifier','Tuning test error','Tuned')
+    # BoxPlot(allTuningTestErrors)
     # OptimismPlot(optimism)
 
     # Finds the parameter constilation that is most common among the best models from the tuning
@@ -198,9 +198,9 @@ def main():
         model.fit(X_t,y_t)
         yPred = model.predict(X_tst)
         error = zero_one_loss(y_tst,yPred)
-        finalTestErrors[name] = error
+        finalTuningTestErrors[name] = error
     
-    print(finalTestErrors)    
+    print(finalTuningTestErrors)    
 
 
 main()

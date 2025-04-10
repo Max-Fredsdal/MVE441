@@ -21,7 +21,7 @@ the hue is optional
 
 # df = sns.load_dataset("titanic")
 
-def seaborn_boxplot(df: pd.DataFrame, xCol: str, yCol: str, hueCol = None, hueLabelMap = None, ylim=None) -> int:
+def seaborn_boxplot(df: pd.DataFrame, xCol: str, yCol: str, title = "", hueCol = None, hueLabelMap = None, ylim=None) -> int:
     
     ax = sns.boxplot(data = df, x=xCol, y=yCol, hue=hueCol)
     
@@ -29,6 +29,7 @@ def seaborn_boxplot(df: pd.DataFrame, xCol: str, yCol: str, hueCol = None, hueLa
         plt.ylim(ylim)
     plt.gca().set_axisbelow(True)
     plt.grid(axis='y', alpha=0.3 , linestyle="--")
+    plt.title(title)
 
     if hueCol and hueLabelMap:
         handles, labels = ax.get_legend_handles_labels()
@@ -41,11 +42,11 @@ def seaborn_boxplot(df: pd.DataFrame, xCol: str, yCol: str, hueCol = None, hueLa
     return 0
 
 
-def BoxPlot(testErrors):
+def BoxPlot(TuningTestErrors):
 
 
-    labels = list(testErrors.keys())          
-    errors = list(testErrors.values())
+    labels = list(TuningTestErrors.keys())          
+    errors = list(TuningTestErrors.values())
 
     plt.figure()
     plt.boxplot(errors, labels=labels)
