@@ -76,7 +76,7 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
         xTest = test[:, 1:]
         yTest = test[:, 0]
 
-        innerCV = KFold(n_splits=3, shuffle = True)
+        innerCV = KFold(n_splits=10, shuffle = True, random_state=42)
 
         gridSearch = GridSearchCV(
             estimator= model,
