@@ -5,9 +5,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import zero_one_loss
 import pandas as pd
 import numpy as np
-from KNN import KNN
-from KNN import LDA
-from KNN import RandomForest
+from classifiers import KNN, LDA, RandomForest
 import matplotlib.pyplot as plt
 
 """Used for training/test error (no tuning)"""
@@ -64,14 +62,15 @@ def doubleCV(foldDataTraining, foldDataTest, model, paramGrid):
         xTest = test[:, 1:]
         yTest = test[:, 0]
 
-        innerCV = KFold(n_splits=10, shuffle = True, random_state=42)
+        innerCV = KFold(n_splits=5, shuffle = True, random_state=42)
 
         gridSearch = GridSearchCV(
             estimator= model,
             param_grid=paramGrid,
             cv = innerCV,
             scoring='accuracy',
-            return_train_score=True
+            return_train_score=True,
+            refit=True
         )
 
         gridSearch.fit(xTrain,yTrain)
@@ -113,24 +112,17 @@ def CVErrorVSHyperparam(model_class, hyperparam_name, hyperparam_values, foldDat
 
     return meanErrors
 
-def evaluate_best_models(models, testFold):
+def evaluate_best_models(models, xTest, yTest):
     performance = {}
-    
-    
+    errors = []
     for i, model in enumerate(models):
-        errors = []
-        for k in range(len(testFold)):
-            test_data = testFold[k]
-            xTest = test_data[:, 1:]
-            yTest = test_data[:, 0]
-
-            yPred = model.predict(xTest)
-            error = zero_one_loss(yTest, yPred)
-            errors.append(error)
-
-        performance[f"Model {i+1}"] = errors
-        rows = [(key, val) for key, values in performance.items() for val in values]
-        df = pd.DataFrame(rows, columns=["Model name", "CV Error"])
+        yPred = model.predict(xTest)
+        error = zero_one_loss(yTest, yPred)
+        errors.append(error)
+        
+        
+    performance["Test error"] = errors   
+    df = pd.DataFrame(performance)
 
     return df
 

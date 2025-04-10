@@ -26,10 +26,11 @@ def misslabel_data_simple(data, p):
         raise Exception("Modified data shape is inconsistent with original shape!")
 
 
-def misslabel_data_specified(data, labels, p=0.1, pOut = []):
+def misslabel_data_specified(data,target, labels, p=0.1, pOut = []):
     """
     data:   Data set with shape (nDatapoints, nFeatures) where 
             the first column is the label of the data.
+    target: The label(s) to target with the misslabeling.
     labels: The available outcomes of a label change. 
             Example; misslabel variable y1 as one of 
             the following [y2, y3, y4].
@@ -38,15 +39,13 @@ def misslabel_data_specified(data, labels, p=0.1, pOut = []):
     pOut:   "Optional" specified proportions of misslabeling 
             outcomes. If left empty the misslabeling will be
             choosen uniformly from the provided labels.
-    Return: the misslabeled data set and the corresponding indices that were changed.
+    Return: the misslabeled data set
     """
-    if len(pOut) != len(labels):
-        raise Exception("The length of the available misslabelings does " \
-                        "not mach the length of proportions of misslabelings")
-
-    lenData = np.shape(data)[0]
-    nChanges = lenData*p
-    idx = np.random.choice([i for i in range(lenData)], size=nChanges, replace=False)
+    
+    data = np.array(data)
+    target_idx = np.where(data == target)[0]
+    nChanges = round(len(target_idx) * p)
+    idx = np.random.choice(target_idx, size=nChanges, replace=False)
     if pOut == []:
         misslabel = np.random.choice(labels, size=nChanges, replace=True)
     else:
@@ -54,7 +53,7 @@ def misslabel_data_specified(data, labels, p=0.1, pOut = []):
 
     
 
-    newData = data
-    newData[idx,0] = misslabel
+    newData = data.copy()
+    newData[idx] = misslabel
 
-    return newData, idx
+    return newData
