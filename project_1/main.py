@@ -27,7 +27,7 @@ def main():
     y_tst = y_tst.to_numpy().reshape(-1,1)
 
     """Uncomment this to specify misslabeling or specified misslabeling"""
-    y_t = misslabel_data_simple(y_t, 0.8)
+    y_t = misslabel_data_simple(y_t, 0.5)
     # y_t = misslabel_data_specified(y_t,6,[9,-9], 0.8, [0.5,0.5])
 
     outerCV = KFold(n_splits=10, shuffle=True, random_state=42)
