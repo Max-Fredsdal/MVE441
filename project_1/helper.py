@@ -112,14 +112,14 @@ def CVErrorVSHyperparam(model_class, hyperparam_name, hyperparam_values, foldDat
 
     return meanErrors
 
-def evaluate_best_models(models, xTest, yTest):
+def evaluate_best_models(models, X_tst, y_tst):
     performance = {}
     errors = []
-    for i, model in enumerate(models):
-        yPred = model.predict(xTest)
-        error = zero_one_loss(yTest, yPred)
-        errors.append(error)
-        
+    
+    for model in models:
+        yPred = model.predict(X_tst)
+        error = zero_one_loss(y_tst, yPred)
+        errors.append(error)  
         
     performance["Test error"] = errors   
     df = pd.DataFrame(performance)

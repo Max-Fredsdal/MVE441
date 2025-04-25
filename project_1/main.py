@@ -27,7 +27,7 @@ def main():
     y_tst = y_tst.to_numpy().reshape(-1,1)
 
     """Uncomment this to specify misslabeling or specified misslabeling"""
-    # y_t = misslabel_data_simple(y_t, 0.5)
+    y_t = misslabel_data_simple(y_t, 0.8)
     # y_t = misslabel_data_specified(y_t,6,[9,-9], 0.8, [0.5,0.5])
 
     outerCV = KFold(n_splits=10, shuffle=True, random_state=42)
@@ -158,6 +158,7 @@ def main():
     df_rf["Classifier"] = "Random forest"
     df_rf["Optimism"] = df_rf["Test error"] - pd.Series(rfTrainingErrors, index=df_rf.index)
     df_best_models = pd.concat([df_best_models, df_rf])
+    df_best_models.to_csv("data/kolladenna1.csv")
 
     print("randomForest Done tuning")
 
@@ -176,6 +177,7 @@ def main():
     best_lda_params = pd.Series([model.get_params() for model in ldaBestModels]).mode()[0]
     best_rf_params = pd.Series([model.get_params() for model in rfBestModels]).mode()[0]
 
+    # Initializes new classifiers with the optimal paramet
     optimalKNN = KNN(**{k: v for k, v in best_kNN_params.items() if k in ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']})
     optimalKNNLarge = KNN(**{k: v for k, v in best_kNN_params_large.items() if k in ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']})
     optimalLDA = LDA(**{k: v for k, v in best_lda_params.items() if k in ['solver', 'shrinkage', 'priors', 'n_components', 'store_covariance', 'tol']})
@@ -197,4 +199,5 @@ def main():
     
     print(f"Final Test errors: {finalTestErrors}\nFinal Optimism: {finalOptimism}")
 
+    
 main()
